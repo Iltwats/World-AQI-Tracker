@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>Air Quality tracker</title>
+    <link rel="shortcut icon" href="https://th.bing.com/th/id/OIP.5-LuLBThdcylvCYuZZCzuQAAAA?pid=Api&rs=1">
+    <!-- Ensures that IE and Edge uses the latest version and doesn't emulate an older version -->
+    <meta http-equiv="x-ua-compatible" content="IE=Edge">
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.css" type="text/css">
+    <script src="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.js"></script>
+    <style>
+        html,
+        body {
+            margin: 0;
+        }
+
+        #myMap {
+            height: 100vh;
+            width: 100vw;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="myMap"></div>
+    <script type="text/javascript">
+        window.addEventListener("DOMContentLoaded", function () {
+            // A pre-defined location of the Mumbai
+            map_center = [ 72.8776559,19.0759837]
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function (position) {
+                    map_center = [position.coords.longitude, position.coords.latitude]
+                })
+            }
+
+            var map = new atlas.Map('myMap', {
+                authOptions: {
+                    authType: 'subscriptionKey',
+                    subscriptionKey: '{{ data.map_key }}'
+                }
+            });
+
+            map.events.add('ready', function () {
+                var datasource = new atlas.source.DataSource();
+                map.sources.add(datasource);
+
+                function updateAQIData(e) {
+                    bounds = map.getCamera().bounds
+
+                    fetch('./aqi?bounds=' + bounds)
+                        .then(res => {
+                            return res.json()
+                        }).then(response => {
+                            datasource.clear()
+                            datasource.setShapes(response)
+                        })
+                }
+
+                map.layers.add(new atlas.layer.BubbleLayer(datasource, null, {
+                    radius: 10,
+                    opacity: 0.5,
+                    strokeOpacity: 0,
+                    color: ['get', 'color']
+                }));
+
+                map.events.add('zoomend', updateAQIData)
+                map.events.add('dragend', updateAQIData)
+                map.events.add('pitchend', updateAQIData)
+
+                map.setCamera({
+                    center: map_center,
+                    zoom: 5
+                })
+            })
+        })
+    </script>
+    <footer><center>Created by Atul Sharma</center></footer>
+</body>
+
+</html>
